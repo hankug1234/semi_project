@@ -9,8 +9,8 @@ class Datareader:
         self.fc_list = None
         self.cur_s_data = None
         self.fc_code = None
-        self.current_graph_data =  pd.DataFrame({'Date':[0],'Close':[0]})
-        self.default_graph = pd.DataFrame({'Date':[0],'Close':[0]})
+        self.current_graph_data =  pd.DataFrame({'Date':[0],'Close':[0],'name':['NO DATA']})
+        self.default_graph = pd.DataFrame({'Date':[0],'Close':[0],'name':['NO DATA']})
         self.current_show_stock_list = None
         self.current_m_avg_graph_data = None
         self.multi_state = False

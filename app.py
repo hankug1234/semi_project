@@ -9,7 +9,8 @@ import Datareader as dr
 
 data = dr.Datareader()
 data.read_fc('KRX')
-default_graph = px.line(data.default_graph, x='Date', y="Close")
+default_graph = px.line(data.default_graph, x='Date', y="Close",color='name')
+state = None
 
 def generate_table(dataframe, max_rows=10):
     return html.Table([
@@ -66,16 +67,18 @@ app.layout = html.Div(children=[
               )
 def switch(n_click , name, value):
     trigger_id = ctx.triggered_id
+    global state
+    state = value
     if trigger_id == 'submit':
-        return search_stock(n_click,name)
+        search_stock(n_click,name)
+        return change_mode(state)
     elif trigger_id == 'radio':
         return change_mode(value)
     else:
         return default_graph
 def search_stock(n_click ,name):
-    if(n_click==0):
-        return default_graph
-    return px.line(data.get_graph_data('KRF',name), x='Date', y="Close",color='name')
+    if(n_click!=0):
+        data.get_graph_data('KRF', name)
 
 def change_mode(value):
     if value == 'stock':
@@ -87,9 +90,11 @@ def change_mode(value):
             return px.line(data.current_graph_data, x='Date', y="Close",color='name')
         else:
             return px.line(data.get_graph_mavg_data('KRF',data.current_show_stock_list[-1],5,20,60), x='Date', y="Close",color='name')
-    else:
+    elif value == 'multi':
         data.on_multi_state()
         return px.line(data.current_graph_data, x='Date', y="Close",color='name')
+    else:
+        return default_graph
 
 
 if __name__ == '__main__':
