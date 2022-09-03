@@ -1,9 +1,9 @@
 import FinanceDataReader as fdr
 import pandas as pd
+import db_manager
 
 class Datareader:
     def __init__(self):
-        #data_stor
         self.dr = fdr.DataReader
         self.sl = fdr.StockListing
         self.fc_list = None
@@ -14,7 +14,15 @@ class Datareader:
         self.current_show_stock_list = None
         self.current_m_avg_graph_data = None
         self.multi_state = False
+        self.manager = db_manager.DB_manager()
 
+    def __del__(self):
+        self.manager.save_dr(self)
+
+    def get_fc_list(self):
+        if self.fc_list is None:
+            return None
+        return self.fc_list.reset_index()
     def on_multi_state(self):
         self.multi_state = True
     def off_multi_state(self):
@@ -22,7 +30,10 @@ class Datareader:
     def read_fc(self,f_code):
         if self.fc_list is None:
             self.fc_code = f_code
-            self.fc_list = self.sl(f_code)
+            if f_code in self.manager.table_list:
+                self.fc_list = self.manager.read_data(f_code)
+            else:
+                self.fc_list = self.sl(f_code)
             self.fc_list.set_index('Name',inplace=True)
 
     def get_graph_data(self,f_code,*s_name):
@@ -45,7 +56,10 @@ class Datareader:
     def read_stock_datas(self,f_code,*s_name):
         if self.fc_list is None:
             self.fc_code = f_code
-            self.fc_list = self.sl(f_code)
+            if f_code in self.manager.table_list:
+                self.fc_list = self.manager.read_data(f_code)
+            else:
+                self.fc_list = self.sl(f_code)
             self.fc_list.set_index('Name',inplace=True)
 
         sd_dict = {}
@@ -56,6 +70,10 @@ class Datareader:
                 return False
             if self.cur_s_data is not None:
                 if name in self.cur_s_data.keys():
+                    continue
+                elif name in self.manager.table_list:
+                    s_data = self.manager.read_data(name)
+                    sd_dict[name] = s_data
                     continue
 
             code = self.fc_list.loc[name,'Symbol']
@@ -88,8 +106,6 @@ class Datareader:
         graph_type = [self.cur_s_data[x] for x in stock_names]
         return pd.concat(graph_type,axis=0)
 
-
-
     def n_m_avg(self,n,stock, column):
         if stock in self.cur_s_data.keys():
             df = self.cur_s_data[stock]
@@ -108,3 +124,5 @@ class Datareader:
                     return mavg
         return None
 
+#dr = Datareader()
+#dr.manager.read_data('삼성전자')
