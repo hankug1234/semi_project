@@ -1,12 +1,14 @@
 import pymysql as db
 import pandas as pd
-
+from datetime import datetime
 class DB_manager:
     def __init__(self,path='config.json'):
         self.config = pd.read_json(path,orient='index')
         self.table_list = None
+        self.fc_code_list = ["NASDAQ","NYSE","AMEX","SP500","KRX","KOSPI","KOSDAQ","KONEX"]
         self.convert_table = {'int64':'BIGINT','float64':'DECIMAL(25,7)','object':'TEXT','datetime64[ns]':'DATETIME','category':'ENUM','bool':'BOOL'}
         self.get_table_list()
+        self.sync_db_datas()
 
     def connection(self):
         try:
@@ -23,6 +25,21 @@ class DB_manager:
             print(e)
         return None
 
+    def sync_db_datas(self):
+        table_list = self.table_list
+        result = {}
+        re = {}
+        sqls = [(name,f"select Date from {name} order by Date desc limit 1") for name in table_list if name.upper() not in self.fc_code_list]
+        conn = self.connection()
+        cursor = conn.cursor()
+        for sql in sqls:
+            cursor.execute(sql[1])
+            result[sql[0]] = cursor.fetchall()[0][0]
+        conn.close()
+        for name in result.keys():
+            if result[name] < datetime.now():
+                re[name] = result[name]
+        self.need_sync_lists = re
 
 
     def save_dr(self,dr):
@@ -150,6 +167,5 @@ class DB_manager:
         cursor.execute(sql)
         conn.commit()
         conn.close()
-
 
 

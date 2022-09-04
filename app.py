@@ -10,7 +10,6 @@ from datetime import datetime
 
 app = Dash(__name__)
 data = dr.Datareader()
-data.read_fc('KRX')
 default_graph = px.line(data.default_graph, x='Date', y="Close",color='name')
 state = None
 
@@ -104,6 +103,8 @@ def change_mode(value,start,end):
 
 
 if __name__ == '__main__':
+    data.read_fc('KRX')
+    data.sync_db()
     app.run_server(debug=True)
     data.manager.save_dr(data)
 

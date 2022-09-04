@@ -2,6 +2,7 @@ import FinanceDataReader as fdr
 import pandas as pd
 import db_manager
 import t_db_manager
+from datetime import datetime
 class Datareader:
     def __init__(self):
         self.dr = fdr.DataReader
@@ -16,18 +17,43 @@ class Datareader:
         self.multi_state = False
         self.manager = t_db_manager.DB_manager()#db_manager.DB_manager()
 
+    def read_period_stock_data(self,f_code,s_name,start,end):
+        if self.fc_list is None:
+            self.fc_code = f_code
+            if f_code in self.manager.table_list:
+                self.fc_list = self.manager.read_data(f_code)
+            else:
+                self.fc_list = self.sl(f_code)
+            self.fc_list.set_index('Name',inplace=True)
+
+        if s_name not in self.fc_list.index:
+            print(f"don't exist stock {s_name}")
+            return False
+
+        code = self.fc_list.loc[s_name, 'Symbol']
+        s_data = self.dr(code,start,end)
+        s_data['name'] = s_name
+        s_data['Date'] = s_data.index
+        return s_data
+
+    def sync_db(self):
+        for name in self.manager.need_sync_lists.keys():
+            self.data_sync(name)
+            print(f"{name} sync success")
+    def data_sync(self,name):
+        need_sync_lists = self.manager.need_sync_lists.keys()
+        if name.lower() in need_sync_lists:
+            data = self.read_period_stock_data('KRX',name.upper(),self.manager.need_sync_lists[name],datetime.now())
+            self.manager.save_data(data,name)
+
+
     def get_graph_period_data(self,df,start,end):
-        data_names = df['name'].unique()
-        result = []
         start = pd.to_datetime(start, format='%Y-%m-%d %H:%M:%S')
         end = pd.to_datetime(end, format='%Y-%m-%d %H:%M')
-        for name in data_names:
-            data = df[(df['name'] == name) & ((df['Date']>start)&(df['Date']<end))]
-            if len(data) == 0:
-                result.append(pd.DataFrame({'Date':[0],'Close':[0],'name':[f'NO {name} DATA']}))
-            else:
-                result.append(data)
-        return pd.concat(result,axis=0)
+        data = df[(df['Date'] > start) & (df['Date'] < end)]
+        if len(data) == 0:
+            return pd.DataFrame({'Date':[0],'Close':[0],'name':['NO DATA']})
+        return data
 
 
 
@@ -69,7 +95,7 @@ class Datareader:
     def read_stock_datas(self,f_code,*s_name):
         if self.fc_list is None:
             self.fc_code = f_code
-            if f_code in self.manager.table_list:
+            if f_code.lower() in self.manager.table_list:
                 self.fc_list = self.manager.read_data(f_code)
             else:
                 self.fc_list = self.sl(f_code)
@@ -84,7 +110,7 @@ class Datareader:
             if self.cur_s_data is not None:
                 if name in self.cur_s_data.keys():
                     continue
-                elif name in self.manager.table_list:
+                elif name.lower() in self.manager.table_list:
                     s_data = self.manager.read_data(name)
                     sd_dict[name] = s_data
                     continue
@@ -137,3 +163,5 @@ class Datareader:
                     return mavg
         return None
 
+data = Datareader()
+data.sync_db()
