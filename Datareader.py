@@ -1,7 +1,7 @@
 import FinanceDataReader as fdr
 import pandas as pd
 import db_manager
-
+import t_db_manager
 class Datareader:
     def __init__(self):
         self.dr = fdr.DataReader
@@ -14,15 +14,28 @@ class Datareader:
         self.current_show_stock_list = None
         self.current_m_avg_graph_data = None
         self.multi_state = False
-        self.manager = db_manager.DB_manager()
+        self.manager = t_db_manager.DB_manager()#db_manager.DB_manager()
 
-    def __del__(self):
-        self.manager.save_dr(self)
+    def get_graph_period_data(self,df,start,end):
+        data_names = df['name'].unique()
+        result = []
+        start = pd.to_datetime(start, format='%Y-%m-%d %H:%M:%S')
+        end = pd.to_datetime(end, format='%Y-%m-%d %H:%M')
+        for name in data_names:
+            data = df[(df['name'] == name) & ((df['Date']>start)&(df['Date']<end))]
+            if len(data) == 0:
+                result.append(pd.DataFrame({'Date':[0],'Close':[0],'name':[f'NO {name} DATA']}))
+            else:
+                result.append(data)
+        return pd.concat(result,axis=0)
+
+
 
     def get_fc_list(self):
         if self.fc_list is None:
             return None
         return self.fc_list.reset_index()
+
     def on_multi_state(self):
         self.multi_state = True
     def off_multi_state(self):
@@ -124,5 +137,3 @@ class Datareader:
                     return mavg
         return None
 
-#dr = Datareader()
-#dr.manager.read_data('삼성전자')

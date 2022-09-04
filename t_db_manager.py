@@ -1,22 +1,29 @@
 import pymysql as db
 import pandas as pd
+
 class DB_manager:
     def __init__(self,path='config.json'):
         self.config = pd.read_json(path,orient='index')
         self.table_list = None
         self.convert_table = {'int64':'BIGINT','float64':'DECIMAL(25,7)','object':'TEXT','datetime64[ns]':'DATETIME','category':'ENUM','bool':'BOOL'}
-        cd = self.config[0]
+        self.get_table_list()
+
+    def connection(self):
         try:
-            self.conn = db.connect(host=cd[0], user=cd[1], password=cd[2])
-            self.cursor = self.conn.cursor()
+            cd = self.config[0]
+            conn = db.connect(host=cd[0], user=cd[1], password=cd[2])
+            cursor = conn.cursor()
             make_db = f"create database if not exists {cd[3]};"
             use = f"use {cd[3]};"
-            self.cursor.execute(make_db)
-            self.cursor.execute(use)
-            self.conn.commit()
+            cursor.execute(make_db)
+            cursor.execute(use)
+            conn.commit()
+            return conn
         except Exception as e:
             print(e)
-        self.get_table_list()
+        return None
+
+
 
     def save_dr(self,dr):
         fc_list = dr.get_fc_list()
@@ -50,24 +57,31 @@ class DB_manager:
 
     def read_data(self,name):
         try:
+            conn = self.connection()
+            cursor = conn.cursor()
             sql = f"select * from {name}"
-            self.cursor.execute(sql)
-            data = self.cursor.fetchall()
+            cursor.execute(sql)
+            data = cursor.fetchall()
             sql = f"show columns from {name}"
-            self.cursor.execute(sql)
-            columns = self.cursor.fetchall()
+            cursor.execute(sql)
+            columns = cursor.fetchall()
             columns = [col[0] for col in columns]
             df = pd.DataFrame(data = data,columns=columns)
+            conn.close()
             return df
         except Exception as e:
             print(e)
+            conn.close()
             return None
 
 
     def get_table_list(self):
+        conn = self.connection()
+        cursor = conn.cursor()
         sql = 'show tables'
-        self.cursor.execute(sql)
-        self.table_list = [t[0] for t in self.cursor.fetchall()]
+        cursor.execute(sql)
+        self.table_list = [t[0] for t in cursor.fetchall()]
+        conn.close()
         return self.table_list
 
 
@@ -118,19 +132,24 @@ class DB_manager:
 
 
     def create_table(self,df,name,p_key=None):
+        conn = self.connection()
+        cursor = conn.cursor()
         cols = df.columns
         cols_type = [str(df[t].dtype) for t in cols]
         sql = self.create_table_sql(cols_type,name,cols,p_key)
-        print(sql)
-        self.cursor.execute(sql)
-        self.conn.commit()
+        cursor.execute(sql)
+        conn.commit()
+        conn.close()
 
     def insert_table(self,df,name):
+        conn = self.connection()
+        cursor = conn.cursor()
         cols = df.columns
         cols_type = [self.convert_table[str(df[t].dtype)] for t in cols]
         sql = self.create_insert_sql(name,cols,cols_type,df.values)
-        print(sql)
-        self.cursor.execute(sql)
-        self.conn.commit()
+        cursor.execute(sql)
+        conn.commit()
+        conn.close()
+
 
 
