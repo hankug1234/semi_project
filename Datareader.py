@@ -162,6 +162,3 @@ class Datareader:
                     mavg.index = mavg['Date']
                     return mavg
         return None
-
-data = Datareader()
-data.sync_db()
