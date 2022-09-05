@@ -37,7 +37,7 @@ class DB_manager:
             result[sql[0]] = cursor.fetchall()[0][0]
         conn.close()
         for name in result.keys():
-            if result[name] < datetime.now():
+            if result[name].date() < datetime.now().date():
                 re[name] = result[name]
         self.need_sync_lists = re
 

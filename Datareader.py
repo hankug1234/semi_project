@@ -10,9 +10,9 @@ class Datareader:
         self.fc_list = None
         self.cur_s_data = None
         self.fc_code = None
-        self.current_graph_data =  pd.DataFrame({'Date':[0],'Close':[0],'name':['NO DATA']})
-        self.default_graph = pd.DataFrame({'Date':[0],'Close':[0],'name':['NO DATA']})
-        self.current_show_stock_list = None
+        self.current_graph_data =  pd.DataFrame({'Date':[datetime.now()],'Close':[0],'name':['NO DATA']})
+        self.default_graph = pd.DataFrame({'Date':[datetime.now()],'Close':[0],'name':['NO DATA']})
+        self.current_show_stock_list = []
         self.current_m_avg_graph_data = None
         self.multi_state = False
         self.manager = t_db_manager.DB_manager()#db_manager.DB_manager()
@@ -65,7 +65,7 @@ class Datareader:
     def on_multi_state(self):
         self.multi_state = True
     def off_multi_state(self):
-        self.multi_state  = False
+        self.multi_state = False
     def read_fc(self,f_code):
         if self.fc_list is None:
             self.fc_code = f_code
@@ -78,7 +78,11 @@ class Datareader:
     def get_graph_data(self,f_code,*s_name):
         self.read_stock_datas(f_code,*s_name)
         if(self.multi_state):
-            self.current_show_stock_list.extend([*s_name])
+            for name in [*s_name]:
+                if name in self.current_show_stock_list:
+                    continue
+                else:
+                    self.current_show_stock_list.append(name)
             self.current_graph_data = self.to_graph_type(*self.current_show_stock_list).loc[:,['Close','name','Date']]
         else:
             self.current_graph_data = self.to_graph_type(*s_name).loc[:,['Close','name','Date']]
@@ -157,7 +161,7 @@ class Datareader:
                 if c == column:
                     c_n = i
                     mavg = pd.DataFrame(data={'Close':[df.iloc[i:i + n, c_n].sum() / n for i in range(len(df) - n+1)]})
-                    mavg['Date'] = df.index[:len(df)-n+1]
+                    mavg['Date'] = list(df['Date'][:len(df)-n+1])
                     mavg['name'] = f'mavg{n}'
                     mavg.index = mavg['Date']
                     return mavg
